@@ -1,3 +1,4 @@
-fn main() -> Result<(), String> {
+fn main() -> Result<(), String>{
+    println!("Hello");
     Ok(())
 }
