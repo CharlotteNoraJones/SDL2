@@ -4,24 +4,30 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, WindowCanvas};
+use std::collections::VecDeque;
 use std::time::Duration;
 
 const PLAYER_MOVEMENT_SPEED: i32 = 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
+enum Command {
+    MoveUp,
+    MoveDown,
+    MoveLeft,
+    MoveRight,
+    StopMovingUp,
+    StopMovingDown,
+    StopMovingLeft,
+    StopMovingRight,
 }
 
 #[derive(Debug)]
 struct Player {
     position: Point,
     sprite: Rect,
-    speed: i32,
-    direction: Direction,
+    speed_x: i32,
+    speed_y: i32,
+    commandQueue: VecDeque<Command>,
 }
 
 fn render(
@@ -49,21 +55,40 @@ fn render(
 }
 
 fn update_player(player: &mut Player) {
-    use self::Direction::*;
-    match player.direction {
-        Left => {
-            player.position = player.position.offset(-player.speed, 0);
+    match player.commandQueue.pop_front() {
+        Some(Command::MoveUp) => {
+            player.speed_y -= PLAYER_MOVEMENT_SPEED;
+            player.speed_x = 0;
         }
-        Right => {
-            player.position = player.position.offset(player.speed, 0);
+        Some(Command::MoveDown) => {
+            player.speed_y += PLAYER_MOVEMENT_SPEED;
+            player.speed_x = 0;
         }
-        Down => {
-            player.position = player.position.offset(0, player.speed);
+        Some(Command::MoveLeft) => {
+            player.speed_x -= PLAYER_MOVEMENT_SPEED;
+            player.speed_y = 0;
         }
-        Up => {
-            player.position = player.position.offset(0, -player.speed);
+        Some(Command::MoveRight) => {
+            player.speed_x += PLAYER_MOVEMENT_SPEED;
+            player.speed_y = 0;
         }
+        Some(Command::StopMovingUp) => {
+            player.speed_y = 0;
+        }
+        Some(Command::StopMovingDown) => {
+            player.speed_y = 0;
+        }
+        Some(Command::StopMovingLeft) => {
+            player.speed_x = 0;
+        }
+        Some(Command::StopMovingRight) => {
+            player.speed_x = 0;
+        }
+
+        None => {}
     }
+
+    player.position = player.position.offset(player.speed_x, player.speed_y);
 }
 
 fn main() -> Result<(), String> {
@@ -89,8 +114,9 @@ fn main() -> Result<(), String> {
     let mut player = Player {
         position: Point::new(0, 0),
         sprite: Rect::new(0, 0, 26, 36),
-        speed: 0,
-        direction: Direction::Right,
+        speed_x: 0,
+        speed_y: 0,
+        commandQueue: VecDeque::new(),
     };
 
     let mut event_pump = sdl_context.event_pump()?;
@@ -102,40 +128,28 @@ fn main() -> Result<(), String> {
                     break 'running;
                 }
                 Event::KeyDown { keycode: Some(Keycode::Left), repeat: false, .. } => {
-                    player.speed = PLAYER_MOVEMENT_SPEED;
-                    player.direction = Direction::Left;
+                    player.commandQueue.push_back(Command::MoveLeft);
                 }
                 Event::KeyDown { keycode: Some(Keycode::Right), repeat: false, .. } => {
-                    player.speed = PLAYER_MOVEMENT_SPEED;
-                    player.direction = Direction::Right;
+                    player.commandQueue.push_back(Command::MoveRight);
                 }
                 Event::KeyDown { keycode: Some(Keycode::Up), repeat: false, .. } => {
-                    player.speed = PLAYER_MOVEMENT_SPEED;
-                    player.direction = Direction::Up;
+                    player.commandQueue.push_back(Command::MoveUp);
                 }
                 Event::KeyDown { keycode: Some(Keycode::Down), repeat: false, .. } => {
-                    player.speed = PLAYER_MOVEMENT_SPEED;
-                    player.direction = Direction::Down;
+                    player.commandQueue.push_back(Command::MoveDown);
                 }
-                Event::KeyUp { keycode: Some(Keycode::Left), repeat: false, .. }
-                    if player.direction == Direction::Left =>
-                {
-                    player.speed = 0;
+                Event::KeyUp { keycode: Some(Keycode::Left), repeat: false, .. } => {
+                    player.commandQueue.push_back(Command::StopMovingLeft);
                 }
-                Event::KeyUp { keycode: Some(Keycode::Right), repeat: false, .. }
-                    if player.direction == Direction::Right =>
-                {
-                    player.speed = 0;
+                Event::KeyUp { keycode: Some(Keycode::Right), repeat: false, .. } => {
+                    player.commandQueue.push_back(Command::StopMovingRight);
                 }
-                Event::KeyUp { keycode: Some(Keycode::Up), repeat: false, .. }
-                    if player.direction == Direction::Up =>
-                {
-                    player.speed = 0;
+                Event::KeyUp { keycode: Some(Keycode::Up), repeat: false, .. } => {
+                    player.commandQueue.push_back(Command::StopMovingUp);
                 }
-                Event::KeyUp { keycode: Some(Keycode::Down), repeat: false, .. }
-                    if player.direction == Direction::Down =>
-                {
-                    player.speed = 0;
+                Event::KeyUp { keycode: Some(Keycode::Down), repeat: false, .. } => {
+                    player.commandQueue.push_back(Command::StopMovingDown);
                 }
                 _ => {}
             }
