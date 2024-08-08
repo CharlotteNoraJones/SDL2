@@ -118,9 +118,23 @@ fn main() -> Result<(), String> {
                     player.direction = Direction::Down;
                 }
                 Event::KeyUp { keycode: Some(Keycode::Left), repeat: false, .. }
-                | Event::KeyUp { keycode: Some(Keycode::Right), repeat: false, .. }
-                | Event::KeyUp { keycode: Some(Keycode::Up), repeat: false, .. }
-                | Event::KeyUp { keycode: Some(Keycode::Down), repeat: false, .. } => {
+                    if player.direction == Direction::Left =>
+                {
+                    player.speed = 0;
+                }
+                Event::KeyUp { keycode: Some(Keycode::Right), repeat: false, .. }
+                    if player.direction == Direction::Right =>
+                {
+                    player.speed = 0;
+                }
+                Event::KeyUp { keycode: Some(Keycode::Up), repeat: false, .. }
+                    if player.direction == Direction::Up =>
+                {
+                    player.speed = 0;
+                }
+                Event::KeyUp { keycode: Some(Keycode::Down), repeat: false, .. }
+                    if player.direction == Direction::Down =>
+                {
                     player.speed = 0;
                 }
                 _ => {}
