@@ -98,65 +98,29 @@ fn main() -> Result<(), String> {
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
+                Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running;
                 }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Left),
-                    repeat: false,
-                    ..
-                } => {
+                Event::KeyDown { keycode: Some(Keycode::Left), repeat: false, .. } => {
                     player.speed = PLAYER_MOVEMENT_SPEED;
                     player.direction = Direction::Left;
                 }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Right),
-                    repeat: false,
-                    ..
-                } => {
+                Event::KeyDown { keycode: Some(Keycode::Right), repeat: false, .. } => {
                     player.speed = PLAYER_MOVEMENT_SPEED;
                     player.direction = Direction::Right;
                 }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Up),
-                    repeat: false,
-                    ..
-                } => {
+                Event::KeyDown { keycode: Some(Keycode::Up), repeat: false, .. } => {
                     player.speed = PLAYER_MOVEMENT_SPEED;
                     player.direction = Direction::Up;
                 }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Down),
-                    repeat: false,
-                    ..
-                } => {
+                Event::KeyDown { keycode: Some(Keycode::Down), repeat: false, .. } => {
                     player.speed = PLAYER_MOVEMENT_SPEED;
                     player.direction = Direction::Down;
                 }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Left),
-                    repeat: false,
-                    ..
-                }
-                | Event::KeyUp {
-                    keycode: Some(Keycode::Right),
-                    repeat: false,
-                    ..
-                }
-                | Event::KeyUp {
-                    keycode: Some(Keycode::Up),
-                    repeat: false,
-                    ..
-                }
-                | Event::KeyUp {
-                    keycode: Some(Keycode::Down),
-                    repeat: false,
-                    ..
-                } => {
+                Event::KeyUp { keycode: Some(Keycode::Left), repeat: false, .. }
+                | Event::KeyUp { keycode: Some(Keycode::Right), repeat: false, .. }
+                | Event::KeyUp { keycode: Some(Keycode::Up), repeat: false, .. }
+                | Event::KeyUp { keycode: Some(Keycode::Down), repeat: false, .. } => {
                     player.speed = 0;
                 }
                 _ => {}
