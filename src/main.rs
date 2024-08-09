@@ -10,6 +10,14 @@ use std::time::Duration;
 const PLAYER_MOVEMENT_SPEED: i32 = 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Facing {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Command {
     MoveUp,
     MoveDown,
@@ -27,7 +35,19 @@ struct Player {
     sprite: Rect,
     speed_x: i32,
     speed_y: i32,
-    commandQueue: VecDeque<Command>,
+    facing: Facing,
+    current_frame: i32,
+    command_queue: VecDeque<Command>,
+}
+
+fn facing_spritesheet_row(facing: Facing) -> i32 {
+    use self::Facing::*;
+    match facing {
+        Up => 3,
+        Down => 0,
+        Left => 1,
+        Right => 2,
+    }
 }
 
 fn render(
@@ -41,13 +61,18 @@ fn render(
 
     let (width, height) = canvas.output_size()?;
 
-    let screen_position = player.position + Point::new(width as i32 / 2, height as i32 / 2);
-    let screen_rect = Rect::from_center(
-        screen_position,
-        player.sprite.width(),
-        player.sprite.height(),
+    let (frame_width, frame_height) = player.sprite.size();
+    let current_frame = Rect::new(
+        player.sprite.x() + frame_width as i32 * player.current_frame,
+        player.sprite.y() + frame_height as i32 * facing_spritesheet_row(player.facing),
+        frame_width,
+        frame_height,
     );
-    canvas.copy(texture, player.sprite, screen_rect)?;
+
+    // Treats the center of the screen as the (0, 0) coordinate
+    let screen_position = player.position + Point::new(width as i32 / 2, height as i32 / 2);
+    let screen_rect = Rect::from_center(screen_position, frame_width, frame_height);
+    canvas.copy(texture, current_frame, screen_rect)?;
 
     canvas.present();
 
@@ -55,7 +80,7 @@ fn render(
 }
 
 fn update_player(player: &mut Player) {
-    match player.commandQueue.pop_front() {
+    match player.command_queue.pop_front() {
         Some(Command::MoveUp) => {
             player.speed_y -= PLAYER_MOVEMENT_SPEED;
             player.speed_x = 0;
@@ -88,7 +113,25 @@ fn update_player(player: &mut Player) {
         None => {}
     }
 
+    update_facing(player);
+
+    if !((player.speed_x == 0) & (player.speed_y == 0)) {
+        player.current_frame = (player.current_frame + 1) % 3;
+    }
+
     player.position = player.position.offset(player.speed_x, player.speed_y);
+}
+
+fn update_facing(player: &mut Player) {
+    if player.speed_y > 0 {
+        player.facing = Facing::Down;
+    } else if player.speed_y < 0 {
+        player.facing = Facing::Up;
+    } else if player.speed_x > 0 {
+        player.facing = Facing::Right;
+    } else if player.speed_x < 0 {
+        player.facing = Facing::Left;
+    }
 }
 
 fn main() -> Result<(), String> {
@@ -116,7 +159,9 @@ fn main() -> Result<(), String> {
         sprite: Rect::new(0, 0, 26, 36),
         speed_x: 0,
         speed_y: 0,
-        commandQueue: VecDeque::new(),
+        facing: Facing::Down,
+        current_frame: 0,
+        command_queue: VecDeque::new(),
     };
 
     let mut event_pump = sdl_context.event_pump()?;
@@ -128,28 +173,28 @@ fn main() -> Result<(), String> {
                     break 'running;
                 }
                 Event::KeyDown { keycode: Some(Keycode::Left), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::MoveLeft);
+                    player.command_queue.push_back(Command::MoveLeft);
                 }
                 Event::KeyDown { keycode: Some(Keycode::Right), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::MoveRight);
+                    player.command_queue.push_back(Command::MoveRight);
                 }
                 Event::KeyDown { keycode: Some(Keycode::Up), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::MoveUp);
+                    player.command_queue.push_back(Command::MoveUp);
                 }
                 Event::KeyDown { keycode: Some(Keycode::Down), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::MoveDown);
+                    player.command_queue.push_back(Command::MoveDown);
                 }
                 Event::KeyUp { keycode: Some(Keycode::Left), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::StopMovingLeft);
+                    player.command_queue.push_back(Command::StopMovingLeft);
                 }
                 Event::KeyUp { keycode: Some(Keycode::Right), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::StopMovingRight);
+                    player.command_queue.push_back(Command::StopMovingRight);
                 }
                 Event::KeyUp { keycode: Some(Keycode::Up), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::StopMovingUp);
+                    player.command_queue.push_back(Command::StopMovingUp);
                 }
                 Event::KeyUp { keycode: Some(Keycode::Down), repeat: false, .. } => {
-                    player.commandQueue.push_back(Command::StopMovingDown);
+                    player.command_queue.push_back(Command::StopMovingDown);
                 }
                 _ => {}
             }
