@@ -4,6 +4,9 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, WindowCanvas};
+use specs::Component;
+use specs::{storage, VecStorage};
+use specs_derive::Component;
 use std::collections::VecDeque;
 use std::time::Duration;
 
@@ -29,6 +32,40 @@ enum Command {
     StopMovingRight,
 }
 
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+struct Position(Point);
+
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+struct Velocity {
+    x: i32,
+    y: i32,
+}
+
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+struct FacingComponent {
+    facing: Facing,
+}
+
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+struct Sprite {
+    spritesheet: usize,
+    region: Rect,
+}
+
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+struct MovementAnimation {
+    current_frame: usize,
+    up_frames: Vec<Sprite>,
+    down_frames: Vec<Sprite>,
+    left_frames: Vec<Sprite>,
+    right_frames: Vec<Sprite>,
+}
+
 #[derive(Debug)]
 struct Player {
     position: Point,
@@ -48,6 +85,30 @@ fn facing_spritesheet_row(facing: Facing) -> i32 {
         Left => 1,
         Right => 2,
     }
+}
+
+fn character_animation_frames(
+    spritesheet: usize,
+    top_left_frame: Rect,
+    facing: Facing,
+) -> Vec<Sprite> {
+    let (frame_width, frame_height) = top_left_frame.size();
+    let y_offset = top_left_frame.y() + frame_height as i32 * facing_spritesheet_row(facing);
+
+    let mut frames = Vec::new();
+    for i in 0..3 {
+        frames.push(Sprite {
+            spritesheet,
+            region: Rect::new(
+                top_left_frame.x() + frame_width as i32 * i,
+                y_offset,
+                frame_width,
+                frame_height,
+            ),
+        })
+    }
+
+    frames
 }
 
 fn render(
@@ -152,7 +213,35 @@ fn main() -> Result<(), String> {
         .expect("could not make a canvas");
 
     let texture_creator = canvas.texture_creator();
-    let texture = texture_creator.load_texture("assets/bardo.png")?;
+
+    let textures = [texture_creator.load_texture("assets/bardo.png")?];
+
+    let player_spritesheet = 0;
+    let player_top_left_frame = Rect::new(0, 0, 26, 36);
+
+    let player_animation = MovementAnimation {
+        current_frame: 0,
+        up_frames: character_animation_frames(
+            player_spritesheet,
+            player_top_left_frame,
+            Facing::Up,
+        ),
+        down_frames: character_animation_frames(
+            player_spritesheet,
+            player_top_left_frame,
+            Facing::Down,
+        ),
+        left_frames: character_animation_frames(
+            player_spritesheet,
+            player_top_left_frame,
+            Facing::Left,
+        ),
+        right_frames: character_animation_frames(
+            player_spritesheet,
+            player_top_left_frame,
+            Facing::Right,
+        ),
+    };
 
     let mut player = Player {
         position: Point::new(0, 0),
